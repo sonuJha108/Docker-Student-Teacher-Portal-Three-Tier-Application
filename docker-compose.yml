@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  db:
+    container_name: mysql-container
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql123
+      MYSQL_DATABASE: school
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pmysql123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    container_name: backend
+    build: 
+      context: backend/
+    image: backend-image
+    restart: always
+    ports:
+      - "3500:3500"
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_NAME: school
+      DB_PASSWORD: mysql123
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    container_name: frontend
+    build:
+      context: frontend/
+      args:
+        REACT_APP_API_BASE_URL: http://backend:3500
+    image: frontend-image
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mysql-data:
